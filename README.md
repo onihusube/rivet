@@ -11,6 +11,10 @@
 
 This library is only for C++20 or later.
 
+## Usage
+
+Copy `include/rivet.hpp` somewhere, reference it from your project, and include `rivet.hpp`.
+
 ## Example
 
 After inclusion of the header(`rivet.hpp`), `rivet::range_adaptor_base<Derived>` is used in the public inheritance by CRTP.
@@ -20,6 +24,8 @@ After inclusion of the header(`rivet.hpp`), `rivet::range_adaptor_base<Derived>`
 Example of a unique implementation of `views::filter`, the range adoptor.
 
 ```cpp
+#include "rivet.hpp"
+
 namespace myranges::views {
   namespace detail {
     
@@ -48,6 +54,8 @@ namespace myranges::views {
 Example of a unique implementation of `views::common`, the range adoptor closure.
 
 ```cpp
+#include "rivet.hpp"
+
 namespace myranges::views {
   namespace detail {
 
