@@ -21,7 +21,7 @@ namespace myranges::views {
       }
 
       //using rivet::range_adaptor_base<filter_adoptor>::operator();
-      ENABLE_RANGE_ADOPTOR(filter_adoptor);
+      RIVET_ENABLE_ADOPTOR(filter_adoptor);
     };
 
     struct common_adoptor_closure : public rivet::range_adaptor_base<common_adoptor_closure, true>

@@ -127,7 +127,7 @@ namespace rivet {
   using range_adaptor_base = typename detail::dispatcher<std::decay_t<Adoptor>, IsClosure, Arity>::type;
 }
 
-#define ENABLE_RANGE_ADOPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
+#define RIVET_ENABLE_ADOPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
 
 #undef RIVET_GCC11
 #undef RIVET_GCC10
