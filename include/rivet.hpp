@@ -46,13 +46,13 @@ namespace rivet::detail {
     }
 #else
 
-    template<typename Arg>
-      requires std::constructible_from<std::decay_t<Arg>, Arg>
-    constexpr auto operator()(Arg&& arg) const noexcept {
+    template<typename... Args>
+      requires (std::constructible_from<std::decay_t<Args>, Args> && ...)
+    constexpr auto operator()(Args&& args) const noexcept {
   #if defined(RIVET_CLANG)
-      return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Arg>(arg)));
+      return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
-      return std::ranges::_Range_closure<Adaptor, std::decay_t<Arg>>{std::forward<Arg>(arg)};
+      return std::ranges::_Range_closure<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
   #endif
     }
 #endif
