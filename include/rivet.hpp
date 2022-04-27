@@ -52,7 +52,7 @@ namespace rivet::detail {
   #if defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Arg>(arg)));
   #elif defined(RIVET_MSVC)
-      return std::ranges::_Range_closure<range_adaptor_base_impl<Adaptor, false>, std::decay_t<Arg>>{std::forward<Arg>(arg)};
+      return std::ranges::_Range_closure<Adaptor, std::decay_t<Arg>>{std::forward<Arg>(arg)};
   #endif
     }
 #endif
