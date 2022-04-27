@@ -18,7 +18,7 @@ if not meson.is_subproject()
 if cppcompiler == 'msvc'
     # VSプロジェクトに編集しうるファイルを追加する
     vs_files = ['include/rivet.hpp']
-    options = ['/source-charset:utf-8', '/Zc:__cplusplus']
+    options = ['/std:c++latest', '/source-charset:utf-8', '/Zc:__cplusplus']
 elif cppcompiler == 'gcc'
     vs_files = []
     options = ['-fconcepts-diagnostics-depth=4']
@@ -35,7 +35,7 @@ else
 
 # ライブラリ利用時の設定追加
 if cppcompiler == 'msvc'
-    options = ['/source-charset:utf-8']
+    options = ['/std:c++latest', '/source-charset:utf-8']
 elif cppcompiler == 'gcc'
     options = []
 endif
