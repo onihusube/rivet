@@ -18,10 +18,10 @@ if not meson.is_subproject()
 if cppcompiler == 'msvc'
     # VSプロジェクトに編集しうるファイルを追加する
     vs_files = ['include/rivet.hpp']
-    options = ['/std:c++latest', '/source-charset:utf-8', '/Zc:__cplusplus']
+    options = ['/source-charset:utf-8', '/Zc:__cplusplus']
 elif cppcompiler == 'gcc'
     vs_files = []
-    options = ['-std=c++2a', '-fconcepts-diagnostics-depth=4']
+    options = ['-fconcepts-diagnostics-depth=4']
 endif
 
 # Boost.UT
@@ -35,9 +35,9 @@ else
 
 # ライブラリ利用時の設定追加
 if cppcompiler == 'msvc'
-    options = ['/std:c++20', '/source-charset:utf-8']
+    options = ['/source-charset:utf-8']
 elif cppcompiler == 'gcc'
-    options = ['-std=c++2a']
+    options = []
 endif
 
 # subprojectとして構築時は依存オブジェクトの宣言だけしとく
