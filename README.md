@@ -1,3 +1,5 @@
+[![Test by MSVC](https://github.com/onihusube/rivet/actions/workflows/msvc.yml/badge.svg)](https://github.com/onihusube/rivet/actions/workflows/msvc.yml)
+
 # rivet
 
 `rivet` is a library to create range adaptor(closure) for the original `view` type.
