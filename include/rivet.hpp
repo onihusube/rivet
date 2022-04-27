@@ -27,32 +27,32 @@ namespace rivet::detail {
 
 #ifndef RIVET_GCC10
 
-  template<typename Adoptor, int Arity = 2>
+  template<typename Adaptor, int Arity = 2>
   struct range_adaptor_base_impl
 #ifdef RIVET_GCC11
-    : public std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adoptor>>
+    : public std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>
 #endif
   {
 #ifdef RIVET_GCC11
-    using std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adoptor>>::operator();
+    using std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>::operator();
 
     static constexpr int _S_arity = Arity;
     static constexpr bool _S_has_simple_call_op = true;
 
     template <std::ranges::viewable_range R, typename... Args>
     constexpr auto operator()(R&& r, Args&&... args) const {
-      const auto& self = static_cast<const Adoptor&>(*this);
+      const auto& self = static_cast<const Adaptor&>(*this);
       return self(std::forward<R>(r), std::forward<Args>(args)...);
     }
 #else
 
-    template<typename Args>
-      requires std::constructible_from<std::decay_t<Args>, Args>
-    constexpr auto operator()(Args&& args) const noexcept {
+    template<typename Arg>
+      requires std::constructible_from<std::decay_t<Arg>, Arg>
+    constexpr auto operator()(Arg&& arg) const noexcept {
   #if defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Arg>(arg)));
   #elif defined(RIVET_MSVC)
-      return std::ranges::_Range_closure<range_adaptor_base_impl<Adoptor, false>, std::decay_t<Arg>>{std::forward<Arg>(arg)};
+      return std::ranges::_Range_closure<range_adaptor_base_impl<Adaptor, false>, std::decay_t<Arg>>{std::forward<Arg>(arg)};
   #endif
     }
 #endif
@@ -60,30 +60,30 @@ namespace rivet::detail {
 
 #else
 
-  template<typename Adoptor, auto...>
+  template<typename Adaptor, auto...>
   struct range_adaptor_base_impl {
 
     template <typename... Args>
     constexpr auto operator()(Args&&... args) const {
-      if constexpr (std::default_initializable<Adoptor>) {
+      if constexpr (std::default_initializable<Adaptor>) {
         auto closure = [... args(std::forward<Args>(args))]<typename R>(R &&r) {
-          return Adoptor{}(std::forward<R>(r), args...);
+          return Adaptor{}(std::forward<R>(r), args...);
         };
 
         return std::views::__adaptor::_RangeAdaptorClosure<decltype(closure)>(std::move(closure));
       } else {
-        static_assert([]{return false;}(), "Adoptor must be default_initializable.");
+        static_assert([]{return false;}(), "Adaptor must be default_initializable.");
       }
     }
   };
 
-  template <typename Adoptor>
-  struct range_adoptor_closure_base {
+  template <typename Adaptor>
+  struct range_adaptor_closure_base {
 
     // 1. range | RACO -> view
     template <std::ranges::viewable_range R>
     [[nodiscard]]
-    friend constexpr auto operator|(R &&r, const Adoptor& self) {
+    friend constexpr auto operator|(R &&r, const Adaptor& self) {
       return self(std::forward<R>(r));
     }
 
@@ -102,32 +102,32 @@ namespace rivet::detail {
 #endif
 
 
-  template<typename Adoptor, auto...>
+  template<typename Adaptor, auto...>
   struct dispatcher {
 #ifdef RIVET_GCC11
     using type = std::views::__adaptor::_RangeAdaptorClosure;
 #elif defined(RIVET_GCC10)
-    using type = range_adoptor_closure_base<Adoptor>;
+    using type = range_adaptor_closure_base<Adaptor>;
 #elif defined(RIVET_CLANG)
-    using type = std::__range_adaptor_closure<Adoptor>;
+    using type = std::__range_adaptor_closure<Adaptor>;
 #elif defined(RIVET_MSVC)
-    using type = std::ranges::_Pipe::_Base<Adoptor>;
+    using type = std::ranges::_Pipe::_Base<Adaptor>;
 #endif
   };
 
-  template<typename Adoptor, int Arity>
-  struct dispatcher<Adoptor, false, Arity> {
-    using type = range_adaptor_base_impl<Adoptor, Arity>;
+  template<typename Adaptor, int Arity>
+  struct dispatcher<Adaptor, false, Arity> {
+    using type = range_adaptor_base_impl<Adaptor, Arity>;
   };
 }
 
 namespace rivet {
 
-  template <typename Adoptor, bool IsClosure = false, int Arity = 2>
-  using range_adaptor_base = typename detail::dispatcher<std::decay_t<Adoptor>, IsClosure, Arity>::type;
+  template <typename Adaptor, bool IsClosure = false, int Arity = 2>
+  using range_adaptor_base = typename detail::dispatcher<std::decay_t<Adaptor>, IsClosure, Arity>::type;
 }
 
-#define RIVET_ENABLE_ADOPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
+#define RIVET_ENABLE_ADAPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
 
 #undef RIVET_GCC11
 #undef RIVET_GCC10

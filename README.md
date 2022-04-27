@@ -1,6 +1,6 @@
 # rivet
 
-`rivet` is a library to create range adoptor(closure) for the original `view` type.
+`rivet` is a library to create range adaptor(closure) for the original `view` type.
 
 - header only
 - single file
@@ -21,7 +21,7 @@ After inclusion of the header(`rivet.hpp`), `rivet::range_adaptor_base<Derived>`
 
 ### Range Adoptor
 
-Example of a unique implementation of `views::filter`, the range adoptor.
+Example of a unique implementation of `views::filter`, the range adaptor.
 
 ```cpp
 #include "rivet.hpp"
@@ -30,7 +30,7 @@ namespace myranges::views {
   namespace detail {
     
     // Define adapter type and CRTP
-    struct filter_adoptor: public rivet::range_adaptor_base<filter_adoptor> {
+    struct filter_adaptor: public rivet::range_adaptor_base<filter_adaptor> {
 
       // Range Adoptor main process. Generates the original view.
       // Always defined in `operator() const`.
@@ -40,18 +40,18 @@ namespace myranges::views {
       }
 
       // It is a hassle, but essential.
-      RIVET_ENABLE_ADOPTOR(filter_adoptor);
+      RIVET_ENABLE_ADAPTOR(filter_adaptor);
     };
   }
 
-  // My views::filter(Range adoptor object) difinition.
-  inline constexpr detail::filter_adoptor filter;
+  // My views::filter(Range adaptor object) difinition.
+  inline constexpr detail::filter_adaptor filter;
 }
 ```
 
 ### Range Adoptor Closure
 
-Example of a unique implementation of `views::common`, the range adoptor closure.
+Example of a unique implementation of `views::common`, the range adaptor closure.
 
 ```cpp
 #include "rivet.hpp"
@@ -60,8 +60,8 @@ namespace myranges::views {
   namespace detail {
 
     // Define adapter closure type and CRTP
-    // In this case, specify true after the type name(common_adoptor_closure) to make it clear that it is range adoptor closure.
-    struct common_adoptor_closure : public rivet::range_adaptor_base<common_adoptor_closure, true> {
+    // In this case, specify true after the type name(common_adaptor_closure) to make it clear that it is range adaptor closure.
+    struct common_adaptor_closure : public rivet::range_adaptor_base<common_adaptor_closure, true> {
 
       // Range Adoptor Closure main process. Generates the original view.
       // Always defined in `operator() const`.
@@ -77,8 +77,8 @@ namespace myranges::views {
 
   }
 
-  // My views::common(Range adoptor closure object) difinition.
-  inline constexpr detail::common_adoptor_closure common;
+  // My views::common(Range adaptor closure object) difinition.
+  inline constexpr detail::common_adaptor_closure common;
 }
 ```
 
