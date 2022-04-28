@@ -7,13 +7,24 @@
     #define RIVET_GCC11
   #elif defined(__GNUC__) && __GNUC__ == 10
     #define RIVET_GCC10
-  #elif defined(__clang__)
+  #elif defined(_LIBCPP_VERSION)
+    // clang use lic++
     #define RIVET_CLANG
   #elif defined(_MSC_VER)
     #define RIVET_MSVC
+  #elif defined(__GLIBCXX__)
+    // clang use libstdc++
+    #if 20210408 < __GLIBCXX__
+      #define RIVET_GCC11
+    #else
+      #define RIVET_GCC10
+    #endif
   #else
     #error No support compiler
   #endif
+#elif defined(__clang__) && __has_include(<ranges>)
+  // clang14以下でrange実装中（機能テストマクロがない）
+  #define RIVET_CLANG
 #elif defined(__cpp_lib_ranges)
   #define RIVET_P2387
 #else
