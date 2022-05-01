@@ -39,7 +39,7 @@ namespace rivet::detail {
 #ifdef RIVET_MSVC
   #if 1930 <= _MSC_VER
     template<typename... Ts>
-    using range_closure_t = _Range_closure<Ts...>;
+    using range_closure_t = std::ranges::_Range_closure<Ts...>;
   #else
     // MSVC 2019（_MSC_VER == 1929以下）では、_Range_closure型が存在していない。
     // その実装は、個別のRangeアダプタ型内部でそれぞれに行われている
