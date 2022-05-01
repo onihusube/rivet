@@ -36,6 +36,57 @@
 
 namespace rivet::detail {
 
+#ifdef RIVET_MSVC
+  #if 1930 <= _MSC_VER
+    template<typename... Ts>
+    using range_closure_t = _Range_closure<Ts...>;
+  #else
+    // MSVC 2019（_MSC_VER == 1929以下）では、_Range_closure型が存在していない。
+    // その実装は、個別のRangeアダプタ型内部でそれぞれに行われている
+    template<std::default_initializable Adaptor, typename... Ts>
+    class range_closure_t : public std::ranges::_Pipe::_Base<range_closure_t<Adaptor, Ts...>> {
+      std::tuple<Ts...> m_args;
+
+      template<typename R, typename T, std::size_t... Idx>
+      static constexpr decltype(auto) call(R&& range, T&& tuple, std::index_sequence<Idx...>) {
+        return Adaptor{}(std::forward<R>(range), std::get<Idx>(std::forward<T>(tuple))...);
+      }
+
+      using idx_seq = std::index_sequence_for<Ts...>;
+
+    public:
+
+      template<typename... Args>
+        requires (std::same_as<std::decay_t<Args>, Ts> && ...)
+      constexpr explicit range_closure_t(Args&&... args)
+        : m_args(std::forward<Args>(args)...)
+      {}
+
+        
+      template<std::ranges::viewable_range R>
+      constexpr decltype(auto) operator()(R&& range) & {
+        return call(std::forward<R>(range), m_args, idx_seq{});
+      }
+
+      template<std::ranges::viewable_range R>
+      constexpr decltype(auto) operator()(R&& range) const & {
+        return call(std::forward<R>(range), m_args, idx_seq{});
+      }
+
+      template<std::ranges::viewable_range R>
+      constexpr decltype(auto) operator()(R&& range) && {
+        return call(std::forward<R>(range), std::move(m_args), idx_seq{});
+      }
+
+      template<std::ranges::viewable_range R>
+      constexpr decltype(auto) operator()(R&& range) const && {
+        return call(std::forward<R>(range), std::move(m_args), idx_seq{});
+      }
+
+    };
+  #endif
+#endif
+
 #ifndef RIVET_GCC10
 
   template<typename Adaptor, int Arity = 2>
@@ -63,7 +114,7 @@ namespace rivet::detail {
   #if defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
-      return std::ranges::_Range_closure<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
+      return range_closure_t<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
   #endif
     }
 #endif
