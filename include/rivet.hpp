@@ -22,7 +22,7 @@
   #else
     #error No support compiler
   #endif
-#elif defined(__clang__) && __has_include(<ranges>)
+#elif defined(__clang__) && __has_include(<ranges>) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
   // clang14以下でrange実装中（機能テストマクロがない）
   #define RIVET_CLANG
 #elif defined(__cpp_lib_ranges)
