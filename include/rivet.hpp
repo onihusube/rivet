@@ -7,7 +7,7 @@
     #define RIVET_GCC11
   #elif defined(__GNUC__) && __GNUC__ == 10
     #define RIVET_GCC10
-  #elif defined(_LIBCPP_VERSION)
+  #elif defined(_LIBCPP_VERSION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
     // clang use lic++
     #define RIVET_CLANG
   #elif defined(_MSC_VER)
