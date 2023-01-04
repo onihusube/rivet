@@ -134,9 +134,9 @@ namespace rivet::detail {
       requires (std::constructible_from<std::decay_t<Args>, Args> && ...)
     constexpr auto operator()(Args&&... args) const noexcept {
   #ifdef RIVET_P2387
-      return range_closure_t{std::bind_back(*this, std::forward<Args>(args)...)};
+      return range_closure_t{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
   #elif defined(RIVET_CLANG)
-      return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Args>(args)...));
+      return std::__range_adaptor_closure_t(std::__bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
       return range_closure_t<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
   #endif
