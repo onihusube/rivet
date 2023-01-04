@@ -43,7 +43,22 @@
 
 namespace rivet::detail {
 
-#ifdef RIVET_MSVC
+#ifdef RIVET_P2387
+
+  template<typename F>
+  class range_closure_t : public std::ranges::range_adaptor_closure<range_closure_t<F>> {
+    F m_f;
+  public:
+    constexpr range_closure_t(F&& f) : m_f(std::move(f)) {}
+
+    template <std::ranges::viewable_range R>
+      requires std::invocable<const F&, R>
+    constexpr auto operator()(R&& r) const {
+      return std::invoke(m_f, std::forward<R>(r));
+    }
+  };
+
+#elif defined(RIVET_MSVC)
   #if 1930 <= _MSC_VER
     template<typename... Ts>
     using range_closure_t = std::ranges::_Range_closure<Ts...>;
@@ -98,9 +113,7 @@ namespace rivet::detail {
 
   template<typename Adaptor, int Arity = 2>
   struct range_adaptor_base_impl
-#ifdef RIVET_P2387
-    : public std::ranges::range_adaptor_closure<Adaptor>
-#elif defined(RIVET_GCC)
+#ifdef RIVET_GCC
     : public std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>
 #endif
   {
@@ -121,7 +134,7 @@ namespace rivet::detail {
       requires (std::constructible_from<std::decay_t<Args>, Args> && ...)
     constexpr auto operator()(Args&&... args) const noexcept {
   #ifdef RIVET_P2387
-      return std::ranges::range_adaptor_closure{std::bind_back(*this, std::forward<Args>(args)...)};
+      return range_closure_t{std::bind_back(*this, std::forward<Args>(args)...)};
   #elif defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
