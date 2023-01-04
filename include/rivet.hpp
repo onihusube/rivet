@@ -172,7 +172,7 @@ namespace rivet::detail {
   template<typename Adaptor, auto...>
   struct dispatcher {
 #ifdef RIVET_P2387
-    using type = std::ranges::range_adaptor_closure<Adaptor>
+    using type = std::ranges::range_adaptor_closure<Adaptor>;
 #elif defined(RIVET_GCC11)
     using type = std::views::__adaptor::_RangeAdaptorClosure;
 #elif defined(RIVET_GCC10)
