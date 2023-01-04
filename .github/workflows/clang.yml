@@ -15,5 +15,5 @@ jobs:
           version: 15
           platform: x64
       - run: pip install meson ninja
-      - run: CXX=clangxx meson setup build
+      - run: CXX=clang++-15 meson setup build
       - run: meson test -C build -v
