@@ -3,8 +3,9 @@
 #include <version>
 
 #if defined(__cpp_lib_ranges) && __cpp_lib_ranges < 202202L
-  #if defined(__GNUC__) && __GNUC__ == 11
-    #define RIVET_GCC11
+  #if defined(__GNUC__) && 11 <= __GNUC__
+    // GCC11以降のC++20実装
+    #define RIVET_GCC
   #elif defined(__GNUC__) && __GNUC__ == 10
     #define RIVET_GCC10
   #elif defined(_LIBCPP_VERSION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
@@ -15,7 +16,7 @@
   #elif defined(__GLIBCXX__)
     // clang use libstdc++
     #if 20210408 < __GLIBCXX__
-      #define RIVET_GCC11
+      #define RIVET_GCC
     #else
       #define RIVET_GCC10
     #endif
@@ -26,6 +27,7 @@
   // clang14以下でrange実装中（機能テストマクロがない）
   #define RIVET_CLANG
 #elif defined(__cpp_lib_ranges)
+  // P2387 implemented (C++23)
   #define RIVET_P2387
 #else
   #error This environment does not implement <ranges>
@@ -33,7 +35,11 @@
 
 #include <ranges>
 #include <concepts>
-#include <functional>
+
+#ifdef RIVET_P2387
+  // for std::bind_back()
+  #include <functional>
+#endif
 
 namespace rivet::detail {
 
@@ -94,11 +100,11 @@ namespace rivet::detail {
   struct range_adaptor_base_impl
 #ifdef RIVET_P2387
     : public std::ranges::range_adaptor_closure<Adaptor>
-#elif defined(RIVET_GCC11)
+#elif defined(RIVET_GCC)
     : public std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>
 #endif
   {
-#ifdef RIVET_GCC11
+#ifdef RIVET_GCC
     using std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>::operator();
 
     static constexpr int _S_arity = Arity;
@@ -173,7 +179,7 @@ namespace rivet::detail {
   struct dispatcher {
 #ifdef RIVET_P2387
     using type = std::ranges::range_adaptor_closure<Adaptor>;
-#elif defined(RIVET_GCC11)
+#elif defined(RIVET_GCC)
     using type = std::views::__adaptor::_RangeAdaptorClosure;
 #elif defined(RIVET_GCC10)
     using type = range_adaptor_closure_base<Adaptor>;
@@ -198,7 +204,7 @@ namespace rivet {
 
 #define RIVET_ENABLE_ADAPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
 
-#undef RIVET_GCC11
+#undef RIVET_GCC
 #undef RIVET_GCC10
 #undef RIVET_CLANG
 #undef RIVET_MSVC

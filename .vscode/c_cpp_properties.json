@@ -7,10 +7,11 @@
             ],
             "defines": [],
             "macFrameworkPath": [],
-            "compilerPath": "/usr/local/bin/g++-11",
+            "compilerPath": "/usr/local/bin/g++-12",
             "cStandard": "c17",
             "cppStandard": "c++23",
-            "intelliSenseMode": "macos-gcc-x64"
+            "intelliSenseMode": "macos-gcc-x64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
         }
     ],
     "version": 4
