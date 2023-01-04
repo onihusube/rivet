@@ -123,21 +123,30 @@ namespace rivet::detail {
     static constexpr int _S_arity = Arity;
     static constexpr bool _S_has_simple_call_op = true;
 
+    // 基底クラス_RangeAdaptor<...>には RA(Args...) -> RACO を行うoperator()が定義されている
+    // ただし、派生クラスAdaptorとして呼び出しを行わないため、Adaptorに定義されているoperator()（viewを生成する）を呼び出せない
+    // このクラスとして呼び出しを行おうとはしているため、ここでAdaptorに定義されているoperator()へのルーティングを行う
     template <std::ranges::viewable_range R, typename... Args>
     constexpr auto operator()(R&& r, Args&&... args) const {
+      // 入力rangeと追加引数によって対象のviewを生成する、Adaptorに定義されているoperator()を呼び出す
       const auto& self = static_cast<const Adaptor&>(*this);
       return self(std::forward<R>(r), std::forward<Args>(args)...);
     }
 #else
 
+    // RA(Args...) -> RACO を行うoperator()
     template<typename... Args>
       requires (std::constructible_from<std::decay_t<Args>, Args> && ...)
     constexpr auto operator()(Args&&... args) const noexcept {
+      // いずれの場合も、Adopterにダウンキャストすることで
+      // 入力rangeと追加引数によって対象のviewを生成する、Adaptorに定義されているoperator()を呼び出す
   #ifdef RIVET_P2387
       return range_closure_t{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
   #elif defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
+      // この場合、Adaptorにデフォルト構築可能性を要求する
+      static_assert(std::default_initializable<Adaptor>, "Adaptor must be default_initializable.");
       return range_closure_t<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
   #endif
     }
