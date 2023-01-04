@@ -1,7 +1,6 @@
-#include <ranges>
-#include <algorithm>
-
 #include "rivet.hpp"
+
+#include <algorithm>
 
 #define BOOST_UT_DISABLE_MODULE
 #include <boost/ut.hpp>
