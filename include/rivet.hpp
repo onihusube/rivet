@@ -33,6 +33,7 @@
 
 #include <ranges>
 #include <concepts>
+#include <functional>
 
 namespace rivet::detail {
 
