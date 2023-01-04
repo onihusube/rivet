@@ -21,7 +21,7 @@ if cppcompiler == 'msvc'
     options = ['/std:c++latest', '/source-charset:utf-8', '/Zc:__cplusplus']
 elif cppcompiler == 'gcc'
     vs_files = []
-    options = ['-fconcepts-diagnostics-depth=4']
+    options = []
 endif
 
 # Boost.UT
