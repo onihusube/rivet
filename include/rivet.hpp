@@ -91,7 +91,9 @@ namespace rivet::detail {
 
   template<typename Adaptor, int Arity = 2>
   struct range_adaptor_base_impl
-#ifdef RIVET_GCC11
+#ifdef RIVET_P2387
+    : public std::ranges::range_adaptor_closure<Adaptor>
+#elif defined(RIVET_GCC11)
     : public std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>
 #endif
   {
@@ -111,7 +113,9 @@ namespace rivet::detail {
     template<typename... Args>
       requires (std::constructible_from<std::decay_t<Args>, Args> && ...)
     constexpr auto operator()(Args&&... args) const noexcept {
-  #if defined(RIVET_CLANG)
+  #ifdef RIVET_P2387
+      return std::ranges::range_adaptor_closure{std::bind_back(*this, std::forward<Args>(args)...)};
+  #elif defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(*this, std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
       return range_closure_t<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
@@ -166,7 +170,9 @@ namespace rivet::detail {
 
   template<typename Adaptor, auto...>
   struct dispatcher {
-#ifdef RIVET_GCC11
+#ifdef RIVET_P2387
+    using type = std::ranges::range_adaptor_closure<Adaptor>
+#elif defined(RIVET_GCC11)
     using type = std::views::__adaptor::_RangeAdaptorClosure;
 #elif defined(RIVET_GCC10)
     using type = range_adaptor_closure_base<Adaptor>;
