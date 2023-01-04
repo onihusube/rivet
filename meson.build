@@ -23,7 +23,7 @@ elif cppcompiler == 'gcc'
     vs_files = []
     options = []
     if meson.get_compiler('cpp').get_id() == 'clang'
-        options = ['-stdlib=libc++']
+        options = ['-stdlib=libc++', '-fexperimental-library']
     else
         options = []
     endif
