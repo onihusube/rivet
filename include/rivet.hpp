@@ -107,9 +107,93 @@ namespace rivet::detail {
 
     };
   #endif
+
+#elif defined(RIVET_GCC10)
+  template <typename Adaptor>
+  struct range_adaptor_closure_base {
+
+    // 1. range | RACO -> view
+    template <std::ranges::viewable_range R>
+      requires requires(R&& in, const Adaptor& raco) {
+        { raco(std::forward<R>(in)) } -> std::ranges::view;
+      }
+    [[nodiscard]]
+    friend constexpr auto operator|(R &&r, const Adaptor& self) {
+      return self(std::forward<R>(r));
+    }
+
+    // 2. RACO | RACO -> RACO
+    template<typename LHS, typename RHS>
+    [[nodiscard]]
+    friend constexpr auto operator|(LHS lhs, RHS rhs) {
+      auto closure = [l = std::move(lhs), r = std::move(rhs)]<typename R>(R &&range) {
+        return std::forward<R>(range) | l | r;
+      };
+
+      return std::views::__adaptor::_RangeAdaptorClosure<decltype(closure)>(std::move(closure));
+    }
+  };
 #endif
 
-#ifndef RIVET_GCC10
+  // レンジアダプタクロージャのディスパッチ
+  template<typename Adaptor, auto...>
+  struct dispatcher {
+#ifdef RIVET_P2387
+    using type = std::ranges::range_adaptor_closure<Adaptor>;
+#elif defined(RIVET_GCC)
+    using type = std::views::__adaptor::_RangeAdaptorClosure;
+#elif defined(RIVET_GCC10)
+    using type = range_adaptor_closure_base<Adaptor>;
+#elif defined(RIVET_CLANG)
+    using type = std::__range_adaptor_closure<Adaptor>;
+#elif defined(RIVET_MSVC)
+    using type = std::ranges::_Pipe::_Base<Adaptor>;
+#endif
+  };
+}
+
+namespace rivet {
+
+  template <typename F>
+    requires (not std::is_reference_v<F>) // 常にコピーないしムーブして保持する（確認用）
+  class closure : public detail::dispatcher<closure<F>>::type {
+    F m_f;
+  public:
+
+    // ここは右辺値受けのムーブで十分
+    // bind_back()にせよラムダにせよ、右辺値で渡ってくる用法しか考慮しない
+    constexpr closure(F&& f) : m_f(std::move(f)) {}
+
+    // 呼び出しは完全転送が必要
+    // この型のオブジェクトはレンジアダプタクロージャオブジェクトとしてユーザーコードで任意の呼ばれ方をする
+
+    template <std::ranges::viewable_range R>
+      requires std::invocable<F&, R>
+    constexpr auto operator()(R&& r) & {
+      return m_f(std::forward<R>(r));
+    }
+
+    template <std::ranges::viewable_range R>
+      requires std::invocable<const F&, R>
+    constexpr auto operator()(R&& r) const & {
+      return m_f(std::forward<R>(r));
+    }
+
+    template <std::ranges::viewable_range R>
+      requires std::invocable<F&&, R>
+    constexpr auto operator()(R&& r) && {
+      return std::move(m_f)(std::forward<R>(r));
+    }
+
+    template <std::ranges::viewable_range R>
+      requires std::invocable<const F&&, R>
+    constexpr auto operator()(R&& r) const && {
+      return std::move(m_f)(std::forward<R>(r));
+    }
+  };
+}
+
+namespace rivet::detail {
 
   template<typename Adaptor, int Arity = 2>
   struct range_adaptor_base_impl
@@ -132,6 +216,19 @@ namespace rivet::detail {
       const auto& self = static_cast<const Adaptor&>(*this);
       return self(std::forward<R>(r), std::forward<Args>(args)...);
     }
+#elif defined(RIVET_GCC10)
+
+    template <typename... Args>
+    constexpr auto operator()(Args&&... args) const {
+      // Adaptorにデフォルト構築可能性を要求する
+      static_assert(std::default_initializable<Adaptor>, "Adaptor must be default_initializable.");
+
+      auto closure = [... args(std::forward<Args>(args))]<typename R>(R &&r) {
+        return Adaptor{}(std::forward<R>(r), args...);
+      };
+
+      return std::views::__adaptor::_RangeAdaptorClosure<decltype(closure)>(std::move(closure));
+    }
 #else
 
     // RA(Args...) -> RACO を行うoperator()
@@ -141,7 +238,7 @@ namespace rivet::detail {
       // いずれの場合も、Adopterにダウンキャストすることで
       // 入力rangeと追加引数によって対象のviewを生成する、Adaptorに定義されているoperator()を呼び出す
   #ifdef RIVET_P2387
-      return range_closure_t{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
+      return ::rivet::closure{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
   #elif defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
@@ -153,65 +250,7 @@ namespace rivet::detail {
 #endif
   };
 
-#else
-
-  template<typename Adaptor, auto...>
-  struct range_adaptor_base_impl {
-
-    template <typename... Args>
-    constexpr auto operator()(Args&&... args) const {
-      if constexpr (std::default_initializable<Adaptor>) {
-        auto closure = [... args(std::forward<Args>(args))]<typename R>(R &&r) {
-          return Adaptor{}(std::forward<R>(r), args...);
-        };
-
-        return std::views::__adaptor::_RangeAdaptorClosure<decltype(closure)>(std::move(closure));
-      } else {
-        static_assert([]{return false;}(), "Adaptor must be default_initializable.");
-      }
-    }
-  };
-
-  template <typename Adaptor>
-  struct range_adaptor_closure_base {
-
-    // 1. range | RACO -> view
-    template <std::ranges::viewable_range R>
-    [[nodiscard]]
-    friend constexpr auto operator|(R &&r, const Adaptor& self) {
-      return self(std::forward<R>(r));
-    }
-
-    // 2. RACO | RACO -> RACO
-    template<typename LHS, typename RHS>
-    [[nodiscard]]
-    friend constexpr auto operator|(LHS lhs, RHS rhs) {
-      auto closure = [l = std::move(lhs), r = std::move(rhs)]<typename R>(R &&range) {
-        return std::forward<R>(range) | l | r;
-      };
-
-      return std::views::__adaptor::_RangeAdaptorClosure<decltype(closure)>(std::move(closure));
-    }
-  };
-
-#endif
-
-
-  template<typename Adaptor, auto...>
-  struct dispatcher {
-#ifdef RIVET_P2387
-    using type = std::ranges::range_adaptor_closure<Adaptor>;
-#elif defined(RIVET_GCC)
-    using type = std::views::__adaptor::_RangeAdaptorClosure;
-#elif defined(RIVET_GCC10)
-    using type = range_adaptor_closure_base<Adaptor>;
-#elif defined(RIVET_CLANG)
-    using type = std::__range_adaptor_closure<Adaptor>;
-#elif defined(RIVET_MSVC)
-    using type = std::ranges::_Pipe::_Base<Adaptor>;
-#endif
-  };
-
+  // Rangeアダプタのディスパッチ
   template<typename Adaptor, int Arity>
   struct dispatcher<Adaptor, false, Arity> {
     using type = range_adaptor_base_impl<Adaptor, Arity>;
