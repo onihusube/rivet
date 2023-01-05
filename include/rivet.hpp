@@ -35,11 +35,7 @@
 
 #include <ranges>
 #include <concepts>
-
-#ifdef RIVET_P2387
-  // for std::bind_back()
-  #include <functional>
-#endif
+#include <functional>
 
 namespace rivet::detail {
 
@@ -94,8 +90,12 @@ namespace rivet::detail {
   #endif
 
 #elif defined(RIVET_GCC10)
+
+  // range_adaptor_closure_baseを継承している型のオブジェクトが`|`の両辺にくるのを検出する
+  struct detect_special_ambiguous_case {};
+
   template <typename Adaptor>
-  struct range_adaptor_closure_base {
+  struct range_adaptor_closure_base : public detect_special_ambiguous_case {
 
     // 1. range | RACO -> view
     template <std::ranges::viewable_range R>
@@ -107,11 +107,27 @@ namespace rivet::detail {
       return self(std::forward<R>(r));
     }
 
-    // 2. RACO | RACO -> RACO
-    template<typename LHS, typename RHS>
+    // 2. RACO | RACO (self) -> RACO
+    // RACO | self みたいな場合に必要
+    template<typename LHS>
+      requires (not std::ranges::range<LHS>) and  // 1と曖昧になるのを回避
+               (not std::derived_from<LHS, detect_special_ambiguous_case>)  // 3と曖昧になるのを回避（この型を派生した型が両辺に来た時）
     [[nodiscard]]
-    friend constexpr auto operator|(LHS lhs, RHS rhs) {
-      auto closure = [l = std::move(lhs), r = std::move(rhs)]<typename R>(R &&range) {
+    friend constexpr auto operator|(LHS lhs, Adaptor self) {
+      auto closure = [l = std::move(lhs), r = std::move(self)]<typename R>(R &&range) {
+        return std::forward<R>(range) | l | r;
+      };
+
+      return std::views::__adaptor::_RangeAdaptorClosure<decltype(closure)>(std::move(closure));
+    }
+
+    // 3. RACO (self) | RACO -> RACO
+    // self | RACO みたいな場合に必要
+    // 両辺をテンプレートにすると、このクラスを継承したクラスが2つ以上あるときに多重定義エラーになる
+    template<typename RHS>
+    [[nodiscard]]
+    friend constexpr auto operator|(Adaptor self, RHS rhs) {
+      auto closure = [l = std::move(self), r = std::move(rhs)]<typename R>(R &&range) {
         return std::forward<R>(range) | l | r;
       };
 
@@ -135,6 +151,55 @@ namespace rivet::detail {
     using type = std::ranges::_Pipe::_Base<Adaptor>;
 #endif
   };
+
+#ifdef __cpp_lib_bind_back
+  using std::bind_back;
+#else
+
+  template<typename F, typename... BackArgs>
+  class bind_partial {
+    std::decay_t<F> m_f;
+    std::tuple<std::decay_t<BackArgs>...> m_back_args;
+
+    template<typename Fn, typename T, std::size_t... Idx, typename... FrontArgs>
+    static constexpr auto call(Fn&& f, T&& tuple, std::index_sequence<Idx...>, FrontArgs&&... args) {
+      return std::invoke(std::forward<Fn>(f), std::forward<FrontArgs>(args)..., std::get<Idx>(std::forward<T>(tuple))...);
+    }
+
+  public:
+
+    template<typename Fn = F, typename... Args>
+    constexpr bind_partial(Fn&& f, Args&&... args)
+      : m_f(std::forward<Fn>(f))
+      , m_back_args(std::forward<Args>(args)...)
+    {}
+
+    template<typename... FrontArgs>
+    constexpr auto operator()(FrontArgs&&... front_args) & {
+      return call(m_f, m_back_args, std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    }
+
+    template<typename... FrontArgs>
+    constexpr auto operator()(FrontArgs&&... front_args) const & {
+      return call(m_f, m_back_args, std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    }
+
+    template<typename... FrontArgs>
+    constexpr auto operator()(FrontArgs&&... front_args) && {
+      return call(std::move(m_f), std::move(m_back_args), std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    }
+
+    template<typename... FrontArgs>
+    constexpr auto operator()(FrontArgs&&... front_args) const && {
+      return call(std::move(m_f), std::move(m_back_args), std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    }
+  };
+
+  template<typename F, typename... Args>
+  constexpr auto bind_back(F&& f, Args&&... args) {
+    return bind_partial<F, Args...>{std::forward<F>(f), std::forward<Args>(args)...};
+  }
+#endif
 }
 
 namespace rivet {
@@ -220,6 +285,36 @@ namespace rivet {
 }
 
 #define RIVET_ENABLE_ADAPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
+
+namespace rivet {
+
+  template<typename F>
+    requires (not std::is_reference_v<F>) // 常にコピーないしムーブして保持する（確認用）
+  class adaptor {
+    F m_f;
+
+  public:
+
+    // ここは右辺値受けのムーブで十分、くるのはラムダを直接のはず
+    constexpr adaptor(F&& f) : m_f(std::move(f)) {}
+
+    // 呼び出しも完全転送を考慮しない
+    // この型のオブジェクトはレンジアダプタオブジェクトとして扱われるが、ほぼRACOを生成するためにしか使われないはず
+
+    // RA(r, args...) -> view
+    template<std::ranges::viewable_range R, typename... Args>
+      requires std::invocable<const F&, R, Args...>
+    constexpr auto operator()(R&& r, Args&&... args) const {
+      return m_f(std::forward<R>(r), std::forward<Args>(args)...);
+    }
+
+    // RA(args...) -> RACO
+    template<typename... Args>
+    constexpr auto operator()(Args&&... args) const {
+      return ::rivet::closure{detail::bind_back(m_f, std::forward<Args>(args)...)};
+    }
+  };
+}
 
 #undef RIVET_GCC
 #undef RIVET_GCC10
