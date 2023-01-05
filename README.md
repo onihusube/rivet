@@ -7,9 +7,9 @@
 - header only
 - single file
 - cross platform
-    - GCC10/11
-    - MSVC 2019/2022
-    - clang 14?
+    - GCC 10 or later
+    - MSVC 2019 or later
+    - clang 15(14?) or later
 
 This library is only for C++20 or later.
 
