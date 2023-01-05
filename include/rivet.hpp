@@ -43,22 +43,7 @@
 
 namespace rivet::detail {
 
-#ifdef RIVET_P2387
-
-  template<typename F>
-  class range_closure_t : public std::ranges::range_adaptor_closure<range_closure_t<F>> {
-    F m_f;
-  public:
-    constexpr range_closure_t(F&& f) : m_f(std::move(f)) {}
-
-    template <std::ranges::viewable_range R>
-      requires std::invocable<const F&, R>
-    constexpr auto operator()(R&& r) const {
-      return std::invoke(m_f, std::forward<R>(r));
-    }
-  };
-
-#elif defined(RIVET_MSVC)
+#ifdef RIVET_MSVC
   #if 1930 <= _MSC_VER
     template<typename... Ts>
     using range_closure_t = std::ranges::_Range_closure<Ts...>;
@@ -156,40 +141,11 @@ namespace rivet {
 
   template <typename F>
     requires (not std::is_reference_v<F>) // 常にコピーないしムーブして保持する（確認用）
-  class closure : public detail::dispatcher<closure<F>>::type {
-    F m_f;
-  public:
+  struct closure : F, detail::dispatcher<closure<F>>::type {
 
     // ここは右辺値受けのムーブで十分
     // bind_back()にせよラムダにせよ、右辺値で渡ってくる用法しか考慮しない
-    constexpr closure(F&& f) : m_f(std::move(f)) {}
-
-    // 呼び出しは完全転送が必要
-    // この型のオブジェクトはレンジアダプタクロージャオブジェクトとしてユーザーコードで任意の呼ばれ方をする
-
-    template <std::ranges::viewable_range R>
-      requires std::invocable<F&, R>
-    constexpr auto operator()(R&& r) & {
-      return m_f(std::forward<R>(r));
-    }
-
-    template <std::ranges::viewable_range R>
-      requires std::invocable<const F&, R>
-    constexpr auto operator()(R&& r) const & {
-      return m_f(std::forward<R>(r));
-    }
-
-    template <std::ranges::viewable_range R>
-      requires std::invocable<F&&, R>
-    constexpr auto operator()(R&& r) && {
-      return std::move(m_f)(std::forward<R>(r));
-    }
-
-    template <std::ranges::viewable_range R>
-      requires std::invocable<const F&&, R>
-    constexpr auto operator()(R&& r) const && {
-      return std::move(m_f)(std::forward<R>(r));
-    }
+    constexpr closure(F&& f) : F(std::move(f)) {}
   };
 }
 
