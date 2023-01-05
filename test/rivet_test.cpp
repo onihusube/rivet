@@ -24,8 +24,7 @@ namespace myranges::views {
       RIVET_ENABLE_ADAPTOR(filter_adoptor);
     };
 
-    struct common_adoptor_closure : public rivet::range_adaptor_base<common_adoptor_closure, true>
-    {
+    struct common_adoptor_closure : public rivet::range_adaptor_closure_base<common_adoptor_closure> {
       template<std::ranges::viewable_range R>
       constexpr auto operator()(R&& r) const {
           if constexpr (std::ranges::common_range<R>) {

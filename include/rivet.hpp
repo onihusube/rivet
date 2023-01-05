@@ -282,6 +282,9 @@ namespace rivet {
 
   template <typename Adaptor, bool IsClosure = false, int Arity = 2>
   using range_adaptor_base = typename detail::dispatcher<std::decay_t<Adaptor>, IsClosure, Arity>::type;
+
+  template <typename Adaptor>
+  using range_adaptor_closure_base = range_adaptor_base<Adaptor, true>;
 }
 
 #define RIVET_ENABLE_ADAPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
