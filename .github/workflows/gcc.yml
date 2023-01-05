@@ -1,0 +1,29 @@
+name: Test by GCC
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "05 19 * * 3"
+    
+jobs:
+  gcc10:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: pip install meson ninja
+      - run: CXX=g++-10 meson setup build
+      - run: meson test -C build -v
+  gcc11:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: pip install meson ninja
+      - run: CXX=g++-11 meson setup build
+      - run: meson test -C build -v
+  gcc12:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: pip install meson ninja
+      - run: CXX=g++-12 meson setup build
+      - run: meson test -C build -v
