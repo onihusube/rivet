@@ -112,6 +112,8 @@ namespace myranges::views {
 
 Range adaptor (closure) object can be defined by simply passing a lambda expression describing the process of generating your own `view` to `rivet::adaptor`(for adaptor) or `rivet::closure`(for adaptor closure).
 
+[Compiler Explorer](https://godbolt.org/z/9ThEb3Erf)
+
 ## Reference
 
 - [P2387R3 Pipe support for user-defined range adaptors](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2387r3.html)
