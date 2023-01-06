@@ -209,22 +209,25 @@ namespace rivet::detail {
     // RA(Args...) -> RACO を行うoperator()
     template<typename... Args>
       requires (std::constructible_from<std::decay_t<Args>, Args> && ...)
-    constexpr auto operator()(Args&&... args) const noexcept {
+    constexpr auto operator()(Args&&... args) const noexcept(noexcept(
       // いずれの場合も、Adopterにダウンキャストすることで
       // 入力rangeと追加引数によって対象のviewを生成する、Adaptorに定義されているoperator()を呼び出す
   #ifdef RIVET_P2387
+             ::rivet::closure{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)} )) {
       return ::rivet::closure{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
   #elif defined(RIVET_CLANG)
+             std::__range_adaptor_closure_t(std::__bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)) )) {
       return std::__range_adaptor_closure_t(std::__bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
     #if 1930 <= _MSC_VER
       // この場合、Adaptorにデフォルト構築可能性を要求する
-      static_assert(std::default_initializable<Adaptor>, "Adaptor must be default_initializable.");
+             std::ranges::_Range_closure<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...} )) {
       return std::ranges::_Range_closure<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
     #else
       // MSVC 2019（_MSC_VER == 1929以下）では、_Range_closure型が存在していない。
       // その実装は、個別のRangeアダプタ型内部でそれぞれに行われている
-      return ::rivet::closure{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
+             ::rivet::closure{detail::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)} )) {
+      return ::rivet::closure{detail::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
     #endif
   #endif
     }
