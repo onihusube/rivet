@@ -1,0 +1,20 @@
+name: Test by Clang
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "05 19 * * 3"
+
+jobs:
+  clang15:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: egor-tensin/setup-clang@v1.4
+        with:
+          version: 15
+          platform: x64
+      - run: sudo apt install -y libc++-15-dev
+      - run: pip install meson ninja
+      - run: CXX=clang++-15 meson setup build
+      - run: meson test -C build -v
