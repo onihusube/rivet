@@ -39,59 +39,7 @@
 
 namespace rivet::detail {
 
-#ifdef RIVET_MSVC
-  #if 1930 <= _MSC_VER
-    template<typename... Ts>
-    using range_closure_t = std::ranges::_Range_closure<Ts...>;
-  #else
-    // MSVC 2019（_MSC_VER == 1929以下）では、_Range_closure型が存在していない。
-    // その実装は、個別のRangeアダプタ型内部でそれぞれに行われている
-    template<std::default_initializable Adaptor, typename... Ts>
-    class range_closure_t : public std::ranges::_Pipe::_Base<range_closure_t<Adaptor, Ts...>> {
-      std::tuple<Ts...> m_args;
-
-      template<typename R, typename T, std::size_t... Idx>
-      static constexpr decltype(auto) call(R&& range, T&& tuple, std::index_sequence<Idx...>) {
-        return Adaptor{}(std::forward<R>(range), std::get<Idx>(std::forward<T>(tuple))...);
-      }
-
-      using idx_seq = std::index_sequence_for<Ts...>;
-
-      static constexpr bool NothrowInit = std::is_nothrow_default_constructible_v<Adaptor>;
-
-    public:
-
-      template<typename... Args>
-        requires (std::same_as<std::decay_t<Args>, Ts> && ...)
-      constexpr explicit range_closure_t(Args&&... args) noexcept(std::is_nothrow_constructible_v<std::tuple<Ts...>, Args...>)
-        : m_args(std::forward<Args>(args)...)
-      {}
-
-        
-      template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) & noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, Ts&...>) {
-        return call(std::forward<R>(range), m_args, idx_seq{});
-      }
-
-      template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) const & noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, const Ts&...>)  {
-        return call(std::forward<R>(range), m_args, idx_seq{});
-      }
-
-      template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) && noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, Ts&&...>) {
-        return call(std::forward<R>(range), std::move(m_args), idx_seq{});
-      }
-
-      template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) const && noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, const Ts&&...>)  {
-        return call(std::forward<R>(range), std::move(m_args), idx_seq{});
-      }
-
-    };
-  #endif
-
-#elif defined(RIVET_GCC10)
+#ifdef RIVET_GCC10
 
   // range_adaptor_closure_baseを継承している型のオブジェクトが`|`の両辺にくるのを検出する
   struct detect_special_ambiguous_case {};
@@ -269,9 +217,15 @@ namespace rivet::detail {
   #elif defined(RIVET_CLANG)
       return std::__range_adaptor_closure_t(std::__bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...));
   #elif defined(RIVET_MSVC)
+    #if 1930 <= _MSC_VER
       // この場合、Adaptorにデフォルト構築可能性を要求する
       static_assert(std::default_initializable<Adaptor>, "Adaptor must be default_initializable.");
-      return range_closure_t<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
+      return std::ranges::_Range_closure<Adaptor, std::decay_t<Args>...>{std::forward<Args>(args)...};
+    #else
+      // MSVC 2019（_MSC_VER == 1929以下）では、_Range_closure型が存在していない。
+      // その実装は、個別のRangeアダプタ型内部でそれぞれに行われている
+      return ::rivet::closure{std::bind_back(static_cast<const Adaptor&>(*this), std::forward<Args>(args)...)};
+    #endif
   #endif
     }
 #endif
