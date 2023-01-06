@@ -57,32 +57,34 @@ namespace rivet::detail {
 
       using idx_seq = std::index_sequence_for<Ts...>;
 
+      static constexpr bool NothrowInit = std::is_nothrow_default_constructible_v<Adaptor>;
+
     public:
 
       template<typename... Args>
         requires (std::same_as<std::decay_t<Args>, Ts> && ...)
-      constexpr explicit range_closure_t(Args&&... args)
+      constexpr explicit range_closure_t(Args&&... args) noexcept(std::is_nothrow_constructible_v<std::tuple<Ts...>, Args...>)
         : m_args(std::forward<Args>(args)...)
       {}
 
         
       template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) & {
+      constexpr decltype(auto) operator()(R&& range) & noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, Ts&...>) {
         return call(std::forward<R>(range), m_args, idx_seq{});
       }
 
       template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) const & {
+      constexpr decltype(auto) operator()(R&& range) const & noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, const Ts&...>)  {
         return call(std::forward<R>(range), m_args, idx_seq{});
       }
 
       template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) && {
+      constexpr decltype(auto) operator()(R&& range) && noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, Ts&&...>) {
         return call(std::forward<R>(range), std::move(m_args), idx_seq{});
       }
 
       template<std::ranges::viewable_range R>
-      constexpr decltype(auto) operator()(R&& range) const && {
+      constexpr decltype(auto) operator()(R&& range) const && noexcept(NothrowInit and std::is_nothrow_invocable_v<Adaptor, R, const Ts&&...>)  {
         return call(std::forward<R>(range), std::move(m_args), idx_seq{});
       }
 
@@ -103,7 +105,7 @@ namespace rivet::detail {
         { raco(std::forward<R>(in)) } -> std::ranges::view;
       }
     [[nodiscard]]
-    friend constexpr auto operator|(R &&r, const Adaptor& self) {
+    friend constexpr auto operator|(R &&r, const Adaptor& self) noexcept(std::is_nothrow_invocable_v<const Adaptor&, R>) {
       return self(std::forward<R>(r));
     }
 
@@ -113,7 +115,7 @@ namespace rivet::detail {
       requires (not std::ranges::range<LHS>) and  // 1と曖昧になるのを回避
                (not std::derived_from<LHS, detect_special_ambiguous_case>)  // 3と曖昧になるのを回避（この型を派生した型が両辺に来た時）
     [[nodiscard]]
-    friend constexpr auto operator|(LHS lhs, Adaptor self) {
+    friend constexpr auto operator|(LHS lhs, Adaptor self) noexcept(std::is_nothrow_move_constructible_v<LHS> and std::is_nothrow_move_constructible_v<Adaptor>) {
       auto closure = [l = std::move(lhs), r = std::move(self)]<typename R>(R &&range) {
         return std::forward<R>(range) | l | r;
       };
@@ -126,7 +128,7 @@ namespace rivet::detail {
     // 両辺をテンプレートにすると、このクラスを継承したクラスが2つ以上あるときに多重定義エラーになる
     template<typename RHS>
     [[nodiscard]]
-    friend constexpr auto operator|(Adaptor self, RHS rhs) {
+    friend constexpr auto operator|(Adaptor self, RHS rhs) noexcept(std::is_nothrow_move_constructible_v<Adaptor> and std::is_nothrow_move_constructible_v<RHS>) {
       auto closure = [l = std::move(self), r = std::move(rhs)]<typename R>(R &&range) {
         return std::forward<R>(range) | l | r;
       };
@@ -166,37 +168,39 @@ namespace rivet::detail {
       return std::invoke(std::forward<Fn>(f), std::forward<FrontArgs>(args)..., std::get<Idx>(std::forward<T>(tuple))...);
     }
 
+    using idx_seq = std::index_sequence_for<BackArgs...>;
+
   public:
 
     template<typename Fn = F, typename... Args>
-    constexpr bind_partial(Fn&& f, Args&&... args)
+    constexpr bind_partial(Fn&& f, Args&&... args) noexcept(std::is_nothrow_constructible_v<std::decay_t<F>, Fn> and std::is_nothrow_constructible_v<std::tuple<std::decay_t<BackArgs>...>, Args...>)
       : m_f(std::forward<Fn>(f))
       , m_back_args(std::forward<Args>(args)...)
     {}
 
     template<typename... FrontArgs>
-    constexpr auto operator()(FrontArgs&&... front_args) & {
-      return call(m_f, m_back_args, std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    constexpr auto operator()(FrontArgs&&... front_args) & noexcept(std::is_nothrow_invocable_v<F&, FrontArgs..., BackArgs&...>) {
+      return call(m_f, m_back_args, idx_seq{}, std::forward<FrontArgs>(front_args)...);
     }
 
     template<typename... FrontArgs>
-    constexpr auto operator()(FrontArgs&&... front_args) const & {
-      return call(m_f, m_back_args, std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    constexpr auto operator()(FrontArgs&&... front_args) const & noexcept(std::is_nothrow_invocable_v<const F&, FrontArgs..., const BackArgs&...>) {
+      return call(m_f, m_back_args, idx_seq{}, std::forward<FrontArgs>(front_args)...);
     }
 
     template<typename... FrontArgs>
-    constexpr auto operator()(FrontArgs&&... front_args) && {
-      return call(std::move(m_f), std::move(m_back_args), std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    constexpr auto operator()(FrontArgs&&... front_args) && noexcept(std::is_nothrow_invocable_v<F&&, FrontArgs..., BackArgs&&...>) {
+      return call(std::move(m_f), std::move(m_back_args), idx_seq{}, std::forward<FrontArgs>(front_args)...);
     }
 
     template<typename... FrontArgs>
-    constexpr auto operator()(FrontArgs&&... front_args) const && {
-      return call(std::move(m_f), std::move(m_back_args), std::make_index_sequence<sizeof...(BackArgs)>{}, std::forward<FrontArgs>(front_args)...);
+    constexpr auto operator()(FrontArgs&&... front_args) const && noexcept(std::is_nothrow_invocable_v<const F&&, FrontArgs..., const BackArgs&&...>) {
+      return call(std::move(m_f), std::move(m_back_args), idx_seq{}, std::forward<FrontArgs>(front_args)...);
     }
   };
 
   template<typename F, typename... Args>
-  constexpr auto bind_back(F&& f, Args&&... args) {
+  constexpr auto bind_back(F&& f, Args&&... args) noexcept(std::is_nothrow_constructible_v<bind_partial<F, Args...>, F, Args...>) {
     return bind_partial<F, Args...>{std::forward<F>(f), std::forward<Args>(args)...};
   }
 #endif
@@ -210,7 +214,7 @@ namespace rivet {
 
     // ここは右辺値受けのムーブで十分
     // bind_back()にせよラムダにせよ、右辺値で渡ってくる用法しか考慮しない
-    constexpr closure(F&& f) : F(std::move(f)) {}
+    constexpr closure(F&& f) noexcept(std::is_nothrow_move_constructible_v<F>) : F(std::move(f)) {}
   };
 }
 
@@ -232,7 +236,7 @@ namespace rivet::detail {
     // ただし、派生クラスAdaptorとして呼び出しを行わないため、Adaptorに定義されているoperator()（viewを生成する）を呼び出せない
     // このクラスとして呼び出しを行おうとはしているため、ここでAdaptorに定義されているoperator()へのルーティングを行う
     template <std::ranges::viewable_range R, typename... Args>
-    constexpr auto operator()(R&& r, Args&&... args) const {
+    constexpr auto operator()(R&& r, Args&&... args) const noexcept(std::is_nothrow_invocable_v<const Adaptor&, R, Args...>) {
       // 入力rangeと追加引数によって対象のviewを生成する、Adaptorに定義されているoperator()を呼び出す
       const auto& self = static_cast<const Adaptor&>(*this);
       return self(std::forward<R>(r), std::forward<Args>(args)...);
@@ -240,7 +244,9 @@ namespace rivet::detail {
 #elif defined(RIVET_GCC10)
 
     template <typename... Args>
-    constexpr auto operator()(Args&&... args) const {
+    constexpr auto operator()(Args&&... args) const noexcept((std::is_nothrow_constructible_v<Args, Args> && ...) and 
+                                                             (std::is_nothrow_move_constructible_v<Args> && ...))
+    {
       // Adaptorにデフォルト構築可能性を要求する
       static_assert(std::default_initializable<Adaptor>, "Adaptor must be default_initializable.");
 
@@ -299,7 +305,7 @@ namespace rivet {
   public:
 
     // ここは右辺値受けのムーブで十分、くるのはラムダを直接のはず
-    constexpr adaptor(F&& f) : m_f(std::move(f)) {}
+    constexpr adaptor(F&& f) noexcept(std::is_nothrow_move_constructible_v<F>) : m_f(std::move(f)) {}
 
     // 呼び出しも完全転送を考慮しない
     // この型のオブジェクトはレンジアダプタオブジェクトとして扱われるが、ほぼRACOを生成するためにしか使われないはず
@@ -307,13 +313,14 @@ namespace rivet {
     // RA(r, args...) -> view
     template<std::ranges::viewable_range R, typename... Args>
       requires std::invocable<const F&, R, Args...>
-    constexpr auto operator()(R&& r, Args&&... args) const {
+    constexpr auto operator()(R&& r, Args&&... args) const noexcept(std::is_nothrow_invocable_v<const F&, R, Args...>) {
       return m_f(std::forward<R>(r), std::forward<Args>(args)...);
     }
 
     // RA(args...) -> RACO
     template<typename... Args>
-    constexpr auto operator()(Args&&... args) const {
+    constexpr auto operator()(Args&&... args) const noexcept(noexcept(
+             ::rivet::closure{detail::bind_back(m_f, std::forward<Args>(args)...)} )) {
       return ::rivet::closure{detail::bind_back(m_f, std::forward<Args>(args)...)};
     }
   };
