@@ -13,5 +13,5 @@ jobs:
           platform: x64
       - run: sudo apt install -y libc++-15-dev lld-15
       - run: pip install meson ninja
-      - run: CXX=clang++-15 CXX_LD=lld LDFLAGS=-stdlib=libc++ meson setup build
+      - run: CXX=clang++-15 CXX_LD=lld LDFLAGS=-L /usr/lib/llvm-15/lib meson setup build
       - run: meson test -C build -v
