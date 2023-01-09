@@ -15,17 +15,19 @@ cppcompiler = meson.get_compiler('cpp').get_argument_syntax()
 if not meson.is_subproject()
 
 # テストプロジェクト用の設定追加
+ldflags = []
 if cppcompiler == 'msvc'
     # VSプロジェクトに編集しうるファイルを追加する
     vs_files = ['include/rivet.hpp']
-    options = ['/std:c++latest', '/source-charset:utf-8', '/Zc:__cplusplus']
+    cxxflags = ['/std:c++latest', '/source-charset:utf-8', '/Zc:__cplusplus']
 elif cppcompiler == 'gcc'
     vs_files = []
-    options = []
+    cxxflags = []
     if meson.get_compiler('cpp').get_id() == 'clang'
-        options = ['-stdlib=libc++', '-fexperimental-library']
+        cxxflags = ['-stdlib=libc++', '-fexperimental-library']
+        ldflags = ['-stdlib=libc++', '-fexperimental-library']
     else
-        options = []
+        cxxflags = []
     endif
 endif
 
@@ -33,19 +35,19 @@ endif
 boostut_dep = subproject('boost.ut').get_variable('boostut_dep')
 
 # テスト
-exe = executable('rivet_test', 'test/rivet_test.cpp', include_directories : include_directories('include'), extra_files : vs_files, cpp_args : options, dependencies : [boostut_dep])
+exe = executable('rivet_test', 'test/rivet_test.cpp', include_directories : include_directories('include'), extra_files : vs_files, cpp_args : cxxflags, link_args : ldflags, dependencies : [boostut_dep])
 test('rivet test', exe)
 
 else
 
 # ライブラリ利用時の設定追加
 if cppcompiler == 'msvc'
-    options = ['/std:c++latest', '/source-charset:utf-8']
+    cxxflags = ['/std:c++latest', '/source-charset:utf-8']
 elif cppcompiler == 'gcc'
-    options = []
+    cxxflags = []
 endif
 
 # subprojectとして構築時は依存オブジェクトの宣言だけしとく
-rivet_dep = declare_dependency(include_directories : include_directories('include'), cpp_args : options)
+rivet_dep = declare_dependency(include_directories : include_directories('include'), cpp_args : cxxflags)
 
 endif
