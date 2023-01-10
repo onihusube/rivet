@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+      - uses: egor-tensin/setup-clang@v1.4
+        with:
+          version: 15
+          platform: x64
       - run: pip install meson ninja
-      - run: CXX=clang++ meson setup build -Dclang_uses_libcxx=false
+      - run: CXX=clang++-15 meson setup build -Dclang_uses_libcxx=false
       - run: meson test -C build -v
