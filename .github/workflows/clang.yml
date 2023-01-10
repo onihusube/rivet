@@ -1,6 +1,9 @@
 name: Test by Clang
 on:
   push:
+  pull_request:
+  schedule:
+    - cron: "10 19 * * 3"
 
 jobs:
   clang15:
@@ -14,4 +17,11 @@ jobs:
       - run: sudo apt install -y libc++-15-dev libc++abi-15-dev
       - run: pip install meson ninja
       - run: CXX=clang++-15 meson setup build
+      - run: meson test -C build -v
+  clang15-libstdcxx:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - run: pip install meson ninja
+      - run: CXX=clang++ meson setup build
       - run: meson test -C build -v
