@@ -16,12 +16,12 @@ jobs:
           platform: x64
       - run: sudo apt install -y libc++-15-dev libc++abi-15-dev
       - run: pip install meson ninja
-      - run: CXX=clang++-15 meson setup build
+      - run: CXX=clang++-15 meson setup build -Dclang_uses_libcxx=true
       - run: meson test -C build -v
   clang15-libstdcxx:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - run: pip install meson ninja
-      - run: CXX=clang++ meson setup build
+      - run: CXX=clang++ meson setup build -Dclang_uses_libcxx=false
       - run: meson test -C build -v

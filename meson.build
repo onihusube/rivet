@@ -19,13 +19,15 @@ ldflags = []
 if cppcompiler == 'msvc'
     # VSプロジェクトに編集しうるファイルを追加する
     vs_files = ['include/rivet.hpp']
-    cxxflags = ['/std:c++latest', '/source-charset:utf-8', '/Zc:__cplusplus']
+    cxxflags = ['/std:c++latest', '/source-charset:utf-8']
 elif cppcompiler == 'gcc'
     vs_files = []
     cxxflags = []
     if meson.get_compiler('cpp').get_id() == 'clang'
-        cxxflags = ['-stdlib=libc++', '-fexperimental-library']
-        ldflags = ['-stdlib=libc++', '-fexperimental-library']
+        if get_option('clang_uses_libcxx')
+            cxxflags = ['-stdlib=libc++', '-fexperimental-library']
+            ldflags = ['-stdlib=libc++', '-fexperimental-library']
+        endif
     else
         cxxflags = []
     endif
