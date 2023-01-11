@@ -10,7 +10,7 @@
 - cross platform
     - GCC 10 or later
     - MSVC 2019 or later
-    - clang 15(14?) or later
+    - clang 15(libc++ only), 16 or later
 
 This library is only for C++20 or later.
 
