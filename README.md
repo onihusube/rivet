@@ -1,5 +1,6 @@
 [![Test by MSVC](https://github.com/onihusube/rivet/actions/workflows/msvc.yml/badge.svg)](https://github.com/onihusube/rivet/actions/workflows/msvc.yml)
 [![Test by GCC](https://github.com/onihusube/rivet/actions/workflows/gcc.yml/badge.svg)](https://github.com/onihusube/rivet/actions/workflows/gcc.yml)
+[![Test by Clang](https://github.com/onihusube/rivet/actions/workflows/clang.yml/badge.svg)](https://github.com/onihusube/rivet/actions/workflows/clang.yml)
 
 # rivet
 
