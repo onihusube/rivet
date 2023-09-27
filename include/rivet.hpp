@@ -174,6 +174,9 @@ namespace rivet::detail {
     : public std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>
 #endif
   {
+    // 派生クラスでoperator()をusingする際に派生クラス型そのものを取得するのに使用する
+    using get_derived_type_of_range_adaptor_base_t = Adaptor;
+
 #ifdef RIVET_GCC
     using std::views::__adaptor::_RangeAdaptor<range_adaptor_base_impl<Adaptor>>::operator();
 
@@ -250,7 +253,7 @@ namespace rivet {
   using range_adaptor_closure_base = range_adaptor_base<Adaptor, true>;
 }
 
-#define RIVET_ENABLE_ADAPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
+#define RIVET_ENABLE_ADAPTOR using rivet::range_adaptor_base<get_derived_type_of_range_adaptor_base_t>::operator()
 
 namespace rivet {
 

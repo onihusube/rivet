@@ -29,7 +29,7 @@ elif cppcompiler == 'gcc'
             ldflags = ['-stdlib=libc++', '-fexperimental-library']
         endif
     else
-        cxxflags = []
+        cxxflags = ['-fvisibility=hidden']
     endif
 endif
 
