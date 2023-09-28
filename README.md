@@ -44,7 +44,7 @@ namespace myranges::views {
       }
 
       // It is a hassle, but essential.
-      RIVET_ENABLE_ADAPTOR;
+      RIVET_USING_BASEOP;
     };
   }
 

@@ -21,7 +21,7 @@ namespace myranges::views {
       }
 
       //using rivet::range_adaptor_base<filter_adoptor>::operator();
-      RIVET_ENABLE_ADAPTOR;
+      RIVET_USING_BASEOP;
     };
 
     struct common_adoptor_closure : public rivet::range_adaptor_closure_base<common_adoptor_closure> {
@@ -33,6 +33,16 @@ namespace myranges::views {
               return std::ranges::common_view(std::forward<R>(r));
           }
       }
+    };
+
+    // RIVET_ENABLE_ADAPTORのテスト（コンパイルチェックのみ）のための簡易なもの
+    struct take_adoptor : public rivet::range_adaptor_base<take_adoptor> {
+      template<std::ranges::viewable_range R>
+      constexpr auto operator()(R&& r, std::integral auto n) const {
+        return std::ranges::take_view(std::forward<R>(r), n);
+      }
+
+      RIVET_ENABLE_ADAPTOR(take_adoptor);
     };
   }
 

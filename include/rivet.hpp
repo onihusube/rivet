@@ -253,7 +253,9 @@ namespace rivet {
   using range_adaptor_closure_base = range_adaptor_base<Adaptor, true>;
 }
 
-#define RIVET_ENABLE_ADAPTOR using rivet::range_adaptor_base<get_derived_type_of_range_adaptor_base_t>::operator()
+// range_adaptor_base継承時、range_adaptor_baseのoperator()をusingする
+#define RIVET_ENABLE_ADAPTOR(this_type) using rivet::range_adaptor_base<this_type>::operator()
+#define RIVET_USING_BASEOP using rivet::range_adaptor_base<get_derived_type_of_range_adaptor_base_t>::operator()
 
 namespace rivet {
 
